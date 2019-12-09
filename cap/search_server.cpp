@@ -57,6 +57,8 @@ void SearchServer::AddQueriesStream(
 
     unordered_map<string, vector<DOC_RESULT>> cache;
 
+    std::size_t len = sizeof(size_t) * total_docs;
+
     for (string current_query; getline(query_input, current_query); ) {
         const auto& cached_result = cache.find(current_query);
 
@@ -69,9 +71,9 @@ void SearchServer::AddQueriesStream(
         }
 
         {
-            /*if (total_docs < 1000) {
+            if (total_docs < 1000) {
                 memset(idxs.data(), 0, len);
-            } else */{
+            } else {
                 search_results.assign(total_docs, {0, 0});
             }
 
@@ -83,7 +85,7 @@ void SearchServer::AddQueriesStream(
 
             while (words_input >> word) {
                 for (const size_t docid : index.Lookup(word)) {
-                    /*if (total_docs < 1000) {
+                    if (total_docs < 1000) {
                         auto &idx = idxs[docid];
 
                         if (idx == 0) {
@@ -93,7 +95,7 @@ void SearchServer::AddQueriesStream(
                         } else {
                             search_results[idx - 1].first++;
                         }
-                    } else */{
+                    } else {
                         auto& doc_pair = search_results[docid];
 
                         if (!doc_pair.first++) {
@@ -105,10 +107,17 @@ void SearchServer::AddQueriesStream(
                 }
             }
 
-            partial_sort(
-                    begin(search_results),
-                    begin(search_results) + min((size_t) 5, total_docs),
-                    begin(search_results) + max_found_docid + 1, std::greater<>());
+            if (total_docs < 1000) {
+                partial_sort(
+                        begin(search_results),
+                        begin(search_results) + min((size_t) 5, search_results.size()),
+                        end(search_results), std::greater<>());
+            } else {
+                partial_sort(
+                        begin(search_results),
+                        begin(search_results) + min((size_t) 5, total_docs),
+                        begin(search_results) + max_found_docid + 1, std::greater<>());
+            }
 
             auto res_iterators = Head(current_result, 5);
 
